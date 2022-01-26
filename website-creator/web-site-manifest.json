@@ -1,0 +1,9 @@
+{
+    "files": [
+        "./user-search.html",
+        "./css/style.css",
+        "./js/aws-sdk.min-search-users.js",
+	"./js/user-search.js",
+	"./js/connect-user-search-apis.js"
+    ]
+}

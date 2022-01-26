@@ -1,0 +1,351 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Amazon Connect - Search User API's</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta content="utf-8" http-equiv="encoding">
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    
+    <script src=https://cdn.jsdelivr.net/npm/jquery@3.5/dist/jquery.min.js></script>
+    
+    <script src="js/aws-sdk.min-search-users.js"></script>
+    <script src="js/connect-user-search-apis.js"></script>
+    <script src="js/user-search.js"></script>
+    
+    <script src=https://cdn.jsdelivr.net/npm/dna.js@1.6/dist/dna.min.js></script>
+    <script src=https://cdn.jsdelivr.net/npm/web-ignition@1.2/dist/library.min.js></script>
+    
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/pretty-print-json@0.2/dist/pretty-print-json.css>
+    <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@0.2/dist/pretty-print-json.js></script>
+    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>    
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.21/sl-1.3.1/datatables.min.css"/>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.21/sl-1.3.1/datatables.min.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    
+<style>
+    #section-rp-main {
+        padding: 10px;
+        max-width: 250px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+        overflow: auto;
+    }
+    #section-json-output {
+        padding: 10px;
+        max-width: 550px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+    }
+    
+    #section-rp-list {
+        padding: 10px;
+        max-width: 600px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+    }
+    
+    #rpFormatted{
+        white-space: break-spaces;
+        word-break: break-word;
+    }
+    #rpDivFormatted{
+        overflow: scroll;
+        height: 830px;
+    }        
+    #manageRPdialog{
+        display: flex;    align-items: center;  justify-content: center;    
+    }
+    table.tblDetails {
+      border-collapse: collapse;
+      width: 700px;
+    }
+    
+    table.tblDetails td, table.tblDetails th {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    
+    table.tblDetails tr:nth-child(even){background-color: #f2f2f2;}
+    
+    table.tblDetails tr:hover {background-color: #ddd;}
+    
+    table.tblDetails th {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: left;
+      color: black;
+    }
+    table.tblDetails label{
+        display: inline-block;
+        float: right;
+        height: 1em;
+        line-height: 1em;
+        padding: 6px 0 0;
+        width: 100%; 
+        font-size: 1em;
+        margin: 5px 0;
+        clear: both;
+    }
+	table.QCList {
+	  border-collapse: collapse;
+	  width: 100%;
+	}
+	
+	table.QCList td, table.QCList th {
+	  border: 1px solid #ddd;
+	  padding: 8px;
+	}
+	
+	table.QCList tr:nth-child(even){background-color: #f2f2f2;}
+	
+	table.QCList tr:hover {background-color: #ddd;}
+	
+	table.QCList th {
+	  padding-top: 12px;
+	  padding-bottom: 12px;
+	  text-align: left;
+	  color: black;
+	}
+   
+    .spnLeft {
+        display: block;
+        float: left;
+        font-weight: bold;
+    }
+    
+    .spnRight {
+        display: block;
+        float: right;
+        font-weight: bold;
+        color: blue
+    }
+    .btnOptions{
+        width: 200px;
+    }    
+    </style>
+    
+</head>
+
+<body>
+
+<!--navbar div with the id-->
+    <section id="section-rp-main">
+        <form>
+         <fieldset>
+            <legend>Amazon Connect Search User API</legend>
+            <div>
+               <input type="button" id="awsConfiguration" value="AWS Configurations">
+               <input type="button" id="btnStrCondDlg" value="Profile Search">               
+               <!--  <input type="button" id="strCondSrc" value="String Condition">-->
+               <input type="button" id="btnTagCondDlg" value="Tag Search">               
+               <!--  <input type="button" id="btnCreateUser" value="Create User"> -->              
+               <input type="button" id="btnTagUser" value="Tag User">
+               <input type="button" id="btnUnTagUser" value="UnTag User">
+            </div>               
+         </fieldset>
+         </form>
+    </section>
+    <section id="section-rp-list">
+        <legend>Selected user details</legend>
+        <input type="text" id="selectedQC" value="" > 
+        <div style="height: 90%;  overflow: scroll;">
+            <table id="qcListTable" style="width:100%;border:1px;height:80%" class="cell-border compact stripe" /></table>
+        </div>
+    </section>
+
+    <section id="section-json-output">
+        <legend>JSON Output</legend>
+        <div id="rpDivFormatted"><pre id="rpFormatted"></pre></div>
+    </section>
+
+    <div id="dialog" title="Waiting">
+          <span id="waitingSpan">Waiting for server to respond</span>
+    </div>
+    <div id="resultDialog" title="API Result">
+          <span id="resultSpan"></span>
+    </div>
+    
+    <!--  This is the beginning of String conditions dialog -->
+    <div id="divStrDialog" title="String Conditions">
+              <form name="qcForm" id="qcForm">
+              <fieldset class="agent-info">
+                <legend>String AND OR Conditions</legend>
+                 <div id="tabs-1">
+                  <table class='tblDetails' style="width: 300px;">
+                    <tbody>
+                      <tr>
+                        <td>First Name</td>
+                        <td>
+                          <input name="firstName" type="text" id="firstName" placeholder="First Name">
+                        </td>
+                        <td>Last Name</td>
+                        <td>
+                          <input name="lastName" type="text" id="lastName" placeholder="Last Name" >
+                        </td>
+                      </tr>
+                      <tr>  
+                      	<td>User Name</td>
+                        <td>
+                          <input name="userName" type="text" id="userName" placeholder="User Name" >
+                        </td>
+                        <td>Routing Profiles</td>
+                        <td>
+                          <select name="sltRPs" id="sltRPs"><option selected value="-">-</option></select>
+                        </td>                        
+                      </tr>
+                      <tr>  
+                        <td>Security Profiles</td>
+                        <td>
+                          <select name="sltSPs" id="sltSPs"><option selected value="-">-</option></select>
+                        </td>
+                        <td>User Hierarchy</td>
+                        <td>
+                          <select name="sltUHG" id="sltUHG"><option selected value="-">-</option></select>
+                        </td>
+                      </tr>
+                     </tbody>
+                   </table>
+                   <button class="btn btnOptions" type="button" id="btnSearchUser" > Search User</button>
+                   
+                </div>
+               </fieldset>
+             </form>
+
+    </div>    
+    <!--  This is the end of  String conditions dialog -->
+<!--  This is the beginning of Tag conditions dialog -->
+    <div id="divTagDialog" title="Tag Conditions">
+              <form name="tagForm" id="tagForm">
+              <fieldset class="agent-info">
+                <legend>Tag Conditions</legend>
+                 <div id="tabsTagConditions">
+                  <table class='tblDetails' style="width: 300px;">
+                    <tbody>
+                      <tr>
+                      <td>Condition Type</td>
+                      <td>
+                      	<select name="sltCondition" id="sltCondition">
+                          	<option  selected value="OrConditions">OrConditions</option>
+                          	<option value="AndConditions">AndConditions</option>
+                          </select>
+                      </td>
+                      <td>
+                      	<select name="sltSRT" id="sltSRT">
+                          	<option  selected value="FULL">FULL</option>
+                          	<option value="SUMMARY">SUMMARY</option>                          	
+                          </select>
+                      </td>
+                      </tr> 
+                      <tr>
+                        <td>
+                        <select name="tagCond1" id="tagCond1">                          	
+                          	<option value="HAVE">HAVE</option>
+                          	<option value="NOT_HAVE">NOT_HAVE</option>
+                          </select>
+                        </td>                    
+                        <td>
+                         <select name="tagKeys1" id="tagKeys1">
+                          	<option selected value="-">-</option>
+                          	<option value="Location">Location</option>
+                          	<option value="Sensitive">Sensitive</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select name="tagValues1" id="tagValues1">
+                          	<option selected value="-">-</option>
+                          	<option value="USA">USA</option>
+                          	<option value="True">True</option>
+                          </select>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <select name="tagCond2" id="tagCond2">
+                          	<option value="HAVE">HAVE</option>
+                          	<option value="NOT_HAVE">NOT_HAVE</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select name="tagKeys2" id="tagKeys2">
+                          	<option selected value="-">-</option>
+                          	<option value="Location">Location</option>
+                          	<option value="Sensitive">Sensitive</option>
+                          </select>
+                        </td>                        
+                        <td>
+                          <select name="tagValues2" id="tagValues2">
+                          	<option selected value="-">-</option>
+                          	<option value="USA">USA</option>
+                          	<option value="True">True</option>
+                          </select>
+                        </td>
+                      </tr>
+                     </tbody>
+                   </table>
+                   <button class="btn btnOptions" type="button" id="btnSearchUserByTags" >Search User</button>
+                   
+                </div>
+               </fieldset>
+             </form>
+
+    </div>    
+    <!--  This is the end of  Tag conditions dialog -->
+        
+    <!-- Beginning of AWS Configurations -->
+    <div id="configDialog" title="AWS IAM Credentials">
+         <form  name="AWSIAMInfo" id="AWSIAMInfo" autocomplete="on">
+              <fieldset class="config-info">
+                   <legend>Enter AWS credentials for quick connects management</legend>
+                      <div>
+                      <table>
+                        <tbody>
+                          <tr>
+                            <td>
+                              <label for="dlgSourceAccessKey">Access Key : </label>
+                            </td>
+                            <td>
+                              <input name="dlgSourceAccessKey" type="text" id="dlgSourceAccessKey" placeholder="Access Key">
+                            </td>
+                            <td>
+                                <label for="dlgSourceRegion">Region : </label>
+                            </td>
+                            <td>
+                              <input name="dlgSourceRegion" type="text" id="dlgSourceRegion" placeholder="Region">
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                              <label for="dlgSourceSecretKey">Secret Key : </label>
+                            </td>
+                            <td colspan=3>
+                              <input name="dlgSourceSecretKey" type="text" id="dlgSourceSecretKey" placeholder="Secret Key" style="width:100%;">
+                            </td>
+                            
+                            </tr>
+                            <tr>
+                            <td>
+                              <label for="dlgInstanceId">Instance Id : </label>
+                            </td>
+                            <td colspan=3>
+                              <input name="dlgInstanceId" type="text" id="dlgInstanceId" placeholder="Instance Id" style="width:100%;">
+                            </td>
+                            </tr>
+                            
+                          </tbody>
+                        </table>
+                   </div>
+              </fieldset>
+              <span id="spnAWSMessage" style="color: red;font-weight: bold;float:left"></span><button class="btn" type="button" id="btnConfiguration" style="width: 200px;float:right"> Save Configurations </button>
+           </form>
+     </div>
+    <div id="confirmDialog" title="Delete?">
+      <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Are you sure you want to delete the quick connect?</p>
+    </div>    
+</body>
+</html>
