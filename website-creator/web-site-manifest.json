@@ -3,7 +3,9 @@
         "./user-search.html",
         "./css/style.css",
         "./js/aws-sdk.min-search-users.js",
-	"./js/user-search.js",
-	"./js/connect-user-search-apis.js"
+	    "./js/user-search.js",
+	    "./js/amazon-cognito-identity.min.js",
+	    "./js/aws-cognito-helper.js",
+	    "./js/aws-cognito-sdk.min.js"
     ]
 }

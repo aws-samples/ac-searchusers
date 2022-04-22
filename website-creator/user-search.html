@@ -1,20 +1,24 @@
-
+	
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>Amazon Connect - Search User API's</title>
+  <title>Amazon Connect - Search User API</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta content="utf-8" http-equiv="encoding">
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     
     <script src=https://cdn.jsdelivr.net/npm/jquery@3.5/dist/jquery.min.js></script>
     
-    <script src="js/aws-sdk.min-search-users.js"></script>
-    <script src="js/connect-user-search-apis.js"></script>
+    <script src="js/aws-sdk.min-search-users.js"></script>    
     <script src="js/user-search.js"></script>
-    
+
+	<script src="./js/aws-cognito-config.js"></script>
+	<script src="./js/aws-cognito-helper.js"></script>
+    <script src="./js/aws-cognito-sdk.min.js"></script>
+	<script src="./js/amazon-cognito-identity.min.js"></script>
+	    
     <script src=https://cdn.jsdelivr.net/npm/dna.js@1.6/dist/dna.min.js></script>
     <script src=https://cdn.jsdelivr.net/npm/web-ignition@1.2/dist/library.min.js></script>
     
@@ -125,9 +129,16 @@
         font-weight: bold;
         color: blue
     }
+    
     .btnOptions{
         width: 200px;
-    }    
+    }
+        
+    .spnProfiles{
+	    padding-top: 10px;
+	    padding-left: 10px;
+	    display: inline-block;
+    }
     </style>
     
 </head>
@@ -140,7 +151,7 @@
          <fieldset>
             <legend>Amazon Connect Search User API</legend>
             <div>
-               <input type="button" id="awsConfiguration" value="AWS Configurations">
+               <!-- <input type="button" id="awsConfiguration" value="AWS Configurations"> --> 
                <input type="button" id="btnStrCondDlg" value="Profile Search">               
                <!--  <input type="button" id="strCondSrc" value="String Condition">-->
                <input type="button" id="btnTagCondDlg" value="Tag Search">               
@@ -192,7 +203,7 @@
                       <tr>  
                       	<td>User Name</td>
                         <td>
-                          <input name="userName" type="text" id="userName" placeholder="User Name" >
+                          <input name="userName2" type="text" id="userName2" placeholder="User Name" >
                         </td>
                         <td>Routing Profiles</td>
                         <td>
@@ -211,9 +222,18 @@
                       </tr>
                      </tbody>
                    </table>
+                   </div>
+                   <div>
                    <button class="btn btnOptions" type="button" id="btnSearchUser" > Search User</button>
-                   
-                </div>
+                   <span class="spnProfiles">Profile Details :</span> 
+                   <!-- <span>
+                      	<select name="sltSRT2" id="sltSRT2">
+                          	<option  selected value="FULL">FULL</option>
+                          	<option value="SUMMARY">SUMMARY</option>                          	
+                        </select>
+                   </span>
+                    -->
+                   </div>
                </fieldset>
              </form>
 
@@ -235,12 +255,7 @@
                           	<option value="AndConditions">AndConditions</option>
                           </select>
                       </td>
-                      <td>
-                      	<select name="sltSRT" id="sltSRT">
-                          	<option  selected value="FULL">FULL</option>
-                          	<option value="SUMMARY">SUMMARY</option>                          	
-                          </select>
-                      </td>
+                      
                       </tr> 
                       <tr>
                         <td>
@@ -288,9 +303,20 @@
                       </tr>
                      </tbody>
                    </table>
+                  
+                   </div>
+                   <div>
                    <button class="btn btnOptions" type="button" id="btnSearchUserByTags" >Search User</button>
+                   <span class="spnProfiles">Profile Details :</span> 
+                    <!-- <span>
+                      	<select name="sltSRT" id="sltSRT">
+                          	<option  selected value="FULL">FULL</option>
+                          	<option value="SUMMARY">SUMMARY</option>                          	
+                        </select>
+                   </span> -->
                    
-                </div>
+                   </div>
+                
                </fieldset>
              </form>
 
@@ -301,7 +327,7 @@
     <div id="configDialog" title="AWS IAM Credentials">
          <form  name="AWSIAMInfo" id="AWSIAMInfo" autocomplete="on">
               <fieldset class="config-info">
-                   <legend>Enter AWS credentials for quick connects management</legend>
+                   <legend>Enter AWS credentials for search user api</legend>
                       <div>
                       <table>
                         <tbody>
@@ -346,6 +372,88 @@
      </div>
     <div id="confirmDialog" title="Delete?">
       <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Are you sure you want to delete the quick connect?</p>
-    </div>    
+    </div>
+	<div id="dialog-form" title="User Identity Pool Credentials" style="visibility: hidden;">
+	  <p class="validateTips">All form fields are required.</p>
+	 
+	  <form>
+	    <fieldset>
+	      <label for="userName">UserName :</label>
+	      <input type="text" name="userName" id="userName" value="" class="text ui-widget-content ui-corner-all">
+	      <label for="password">Password</label>
+	      <input type="password" name="password" id="password" value="" class="text ui-widget-content ui-corner-all">
+	 
+	      <!-- Allow form submission with keyboard without duplicating the dialog button -->
+	      <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">	      
+	    </fieldset>
+	    <span id="err1"></span>
+	  </form>
+	</div>
+
+	<div id="dialog-form2" title="User Identity Pool Credentials" style="visibility: hidden;">
+	  <p class="validateTips">All form fields are required., please change your password</p>
+	 
+	  <form>
+	    <fieldset>
+	      <label for="password">New Password</label>
+	      <input type="password" name="password2" id="password2" value="" class="text ui-widget-content ui-corner-all">
+	      <div id="divPasswordPasscode" style="visibility: hidden;">
+		      <label for="passcode" style="width: 200px;">Passcode</label>
+		      <input type="passcode" name="passCode" id="passcode" value="" class="text ui-widget-content ui-corner-all">
+	 	 </div>	
+	      <!-- Allow form submission with keyboard without duplicating the dialog button -->
+	      <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+	    </fieldset>
+	    <span id="err2"></span>
+	  </form>
+	</div>
+	<script>
+			var dialog, form, dialog2, form2;
+		    $( document ).ready(function() {
+		    	$( "#dialog-form" ).css("visibility", "visible")
+				dialog = $( "#dialog-form" ).dialog({
+				      autoOpen: false,
+				      height: 410,
+				      width: 350,
+				      modal: true,
+				      buttons: {
+				        "Login": authenticateUser
+				      },
+				      close: function() {
+				        //form[ 0 ].reset();
+				        //allFields.removeClass( "ui-state-error" );
+				      }
+				    });
+			 
+			    form = dialog.find( "form" ).on( "submit", function( event ) {
+			      event.preventDefault();
+			    });
+			    
+		    	//dialog.dialog( "open" );
+				dialog2 = $( "#dialog-form2" ).dialog({
+				      autoOpen: false,
+				      height: 400,
+				      width: 350,
+				      modal: true,
+				      buttons: {
+				        "Change Password": completeNewPasswordChallenge
+				      },
+				      close: function() {
+				        //form[ 0 ].reset();
+				        //allFields.removeClass( "ui-state-error" );
+				      }
+				    });
+			 
+			    form = dialog.find( "form" ).on( "submit", function( event ) {
+			      event.preventDefault();
+			    });
+			    
+		    	dialog.dialog( "open" );
+		    	
+		    });
+		    
+		    
+	</script>
+	        
 </body>
 </html>

@@ -19,17 +19,22 @@ let websiteHelper = (function() {
     let websiteHelper = function() {};
 
     websiteHelper.prototype.copyWebSiteAssets = function(resourceProperties, cb) {
-		var destS3Bucket = resourceProperties.destS3Bucket;
-		var destS3KeyPrefix = resourceProperties.destS3KeyPrefix;
-		var region = resourceProperties.Region;
-		var instanceName = resourceProperties.instanceAlias;
-		var gatewayAPI = resourceProperties.gatewayAPI;
+	var destS3Bucket = resourceProperties.destS3Bucket;
+	var destS3KeyPrefix = resourceProperties.destS3KeyPrefix;
+	var region = resourceProperties.Region;
+	var identityPoolId = resourceProperties.identityPoolId;
+	var userPoolID = resourceProperties.userPoolID;
+	var appClientId = resourceProperties.appClientId;
+	var instanceARN = resourceProperties.instanceARN;
 
         console.log("Copying UI web site");
         console.log(['destination bucket:', destS3Bucket].join(' '));
         console.log(['destination s3 key prefix:', destS3KeyPrefix].join(' '));
         console.log(['region:', region].join(' '));
-        console.log(['instanceName:', instanceName].join(' '));
+        console.log(['identityPoolId:', identityPoolId].join(' '));
+        console.log(['userPoolID:', userPoolID].join(' '));
+        console.log(['appClientId:', appClientId].join(' '));
+        console.log(['instanceARN:', instanceARN].join(' '));
 
         fs.readFile(_downloadLocation, 'utf8', function(err, data) {
             if (err) {
@@ -49,7 +54,7 @@ let websiteHelper = (function() {
                             return cb(err, null);
                         }
                         console.log(result);
-                        createAWSCredentials(destS3Bucket, destS3KeyPrefix, region, instanceName, 
+                        createAWSCredentials(destS3Bucket, destS3KeyPrefix, region, identityPoolId, userPoolID, appClientId, instanceARN, 
                             function(err, createResult) {
                                 if (err) {
                                     return cb(err, null);
@@ -62,22 +67,33 @@ let websiteHelper = (function() {
         });
     };
     
-    let createAWSCredentials = function(destS3Bucket, destS3KeyPrefix, region, instanceName, cb) {
-        let str = "function initAWS(){ \n";
-        str+= " 	AWS.config.region = '" + region  +"'; \n";
-        str+= "   } \n\n";
-        str+= "   \n $(document).ready(initAWS); \n ";
-        str+= "   \n\n";
+    let createAWSCredentials = function(destS3Bucket, destS3KeyPrefix, region, identityPoolId, userPoolID, appClientId, instanceARN, cb) {
+        let str = "";
         str+= "   function getRegion(){ \n";
         str+= "      return '" + region + "';\n";
         str+= "   } \n\n";
-        str+= "   function getInstanceName(){ \n";
-        str+= "      return '" + instanceName + "';\n";
-        str+= "   } \n\n";		
+
+        str+= "   function getCognitoIdentityPoolId(){ \n";
+        str+= "      return '" + identityPoolId + "';\n";
+        str+= "   } \n\n";
+
+        str+= "   function getCognitoUserPoolId(){ \n";
+        str+= "      return '" + userPoolID + "';\n";
+        str+= "   } \n\n";
+
+        str+= "   function getCognitoClientId(){ \n";
+        str+= "      return '" + appClientId + "';\n";
+        str+= "   } \n\n";      
+        const instanceId = instanceARN.split("/");
+        console.log('Instance Id : ' + instanceId[1]);
+        str+= "   function getInstanceId(){ \n";
+        str+= "      return '" + instanceId[1] + "';\n";
+        str+= "   } \n\n";
+
         //console.log(str);
         let params = {
             Bucket: destS3Bucket,
-            Key: destS3KeyPrefix + '/js/aws-credentials.js',
+            Key: destS3KeyPrefix + '/js/aws-cognito-config.js',
             ContentType : "application/javascript",
             Body: str
         };
@@ -85,9 +101,9 @@ let websiteHelper = (function() {
         s3.putObject(params, function(err, data) {
             if (err) {
                 console.log(err);
-                return cb('error creating ' +destS3Bucket+ ' ' + destS3KeyPrefix +  '/js/aws-credentials.js file for website UI', null);
+                return cb('error creating ' +destS3Bucket+ ' ' + destS3KeyPrefix +  '/js/aws-cognito-config.js file for website UI', null);
             }
-            console.log('Completed uploading aws-credentials.js')
+            console.log('Completed uploading aws-cognito-config.js')
             console.log(data);
             return cb(null, data);
         });

@@ -17,7 +17,7 @@ var timerID;
 var dlgSourceAccessKey, dlgSourceSecretKey, dlgSourceRegion, dlgInstanceId;
 var secKey = "forsecuringc@@kies";
 
-$( document ).ready(function() {
+/*$( document ).ready(function() {
     if (!checkCookie()) {
         setAWSConfig(dlgSourceAccessKey, dlgSourceSecretKey, dlgSourceRegion);
         setupAll();
@@ -25,10 +25,15 @@ $( document ).ready(function() {
         setupAll();
         $( "#configDialog" ).dialog( "open" );
     }
-});
+});*/
+
+$( document ).ready(function() {
+	dlgSourceRegion = getRegion();
+	setupAll();
+});	
 
 function setupAll() {
-    loadConnectAPIs();
+    //loadConnectAPIs();
     $( "#createTabs" ).tabs();
     $("#strCondSrc").click(() => {        
         stringConditionSearch();
@@ -158,13 +163,13 @@ function setupAll() {
         }
     });
     
-    getAllUsers();
+    //getAllUsers();
         
 }
 
 function tagCondition(tagName, tagValue, tagConditionOperator) {
 	var sc = {};	
-	sc['TagConditionOperator'] = tagConditionOperator;
+	//sc['TagConditionOperator'] = tagConditionOperator;
 	sc['TagKey'] = tagName;
 	sc['TagValue'] = tagValue;	
 	return sc;
@@ -206,7 +211,8 @@ try {
         
         
         
-        var user = await searchUsers(dlgInstanceId, null, 100, searchFilter, null, searchResponseType);
+        //var user = await searchUsers(dlgInstanceId, null, 100, searchFilter, null, searchResponseType);
+        var user = await searchUsers(dlgInstanceId, null, 100, searchFilter, null);
         console.log(user);
         formatJSON(user, '#rpFormatted');                
         handleWindow(false, '');
@@ -232,7 +238,7 @@ async function searchUserFromDialog() {
         var sps = $( "#sltSPs option:selected" ).val();
         var uhg = $( "#sltUHG option:selected" ).val();
         
-        var userName = $("#userName").val();
+        var userName = $("#userName2").val();
         var sc1 = {};        
         var cond2 = [];
         
@@ -257,7 +263,7 @@ async function searchUserFromDialog() {
         	conditions.push(condition('HierarchyGroupCondition', null, uhg, 'HierarchyGroupMatchType', 'WITH_CHILD_GROUPS'));
         		
         searchCriteria['AndConditions'] = conditions;
-        var user = await searchUsers(dlgInstanceId, null, 100, null, searchCriteria, searchResponseType);
+        var user = await searchUsers(dlgInstanceId, null, 100, null, searchCriteria);
         console.log(user);
         formatJSON(user, '#rpFormatted');     
         $( "#divStrDialog" ).dialog( "close" );           
@@ -314,9 +320,14 @@ async function getUserInfo() {
     
 }
 
+function runAPIs() {
+	getAllUsers();
+}
 
 async function getAllUsers() {
     try {
+		loadConnectAPIs();
+		dlgInstanceId = getInstanceId();
         handleWindow(true, '');
         agentList = await listUsers(dlgInstanceId);
         console.log(agentList);
@@ -433,10 +444,10 @@ async function unTagResourceARN() {
     }
 	    
 }
-const searchUsers = (instanceId, nextToken, maxResults, searchFilter, searchCriteria, responseType) => {
+const searchUsers = (instanceId, nextToken, maxResults, searchFilter, searchCriteria) => {
     return new Promise((resolve,reject) => {
            var params = {InstanceId : instanceId, NextToken : nextToken, MaxResults : maxResults,
-           				SearchFilter : searchFilter, SearchCriteria : searchCriteria, ResponseType : responseType};       
+           				SearchFilter : searchFilter, SearchCriteria : searchCriteria};       
            console.log(params);
            connect.searchUsers(params, function (err, res) {        
                 if (err) 
@@ -558,7 +569,7 @@ function showResults(message){
 }
 
 function loadConnectAPIs() {
-	var Service = AWS.Service;
+	/*var Service = AWS.Service;
 	var apiLoader = AWS.apiLoader;
 	apiLoader.services['connect'] = {};
 	AWS.Connect = Service.defineService('connect', ['2017-08-08']);
@@ -571,9 +582,10 @@ function loadConnectAPIs() {
 	    enumerable: true,
 	    configurable: true
 	});
-	connect = new AWS.Connect({ region: "us-west-2", endpoint: "https://91am9nwnzk.execute-api.us-west-2.amazonaws.com/Prod" }, {apiVersion: '2017-08-08'});
+	connect = new AWS.Connect({ region: "us-west-2", endpoint: "https://91am9nwnzk.execute-api.us-west-2.amazonaws.com/Prod" }, {apiVersion: '2017-08-08'});*/
 	//connect = new AWS.Connect({ region: "us-west-2", endpoint: "https://1i6i97swl3.execute-api.us-west-2.amazonaws.com/Prod" }, {apiVersion: '2017-08-08'});
-	//connect = new AWS.Connect({ region: dlgSourceRegion});
+	connect = new AWS.Connect({ region: dlgSourceRegion});
+	//connect = new AWS.Connect({ region: "us-west-2", endpoint: "https://91am9nwnzk.execute-api.us-west-2.amazonaws.com/Prod" }, {apiVersion: '2017-08-08'});
 }
 
 

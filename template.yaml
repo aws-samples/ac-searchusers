@@ -5,8 +5,8 @@ Description: >
 Mappings: 
   FunctionMap:
       Configuration:
-          S3Bucket: "amazon-connect-blogs2"
-          S3Key: "2022/search-user-api/"
+          S3Bucket: "aws-contact-center-blog"
+          S3Key: "ram/programmatically-search-for-users-using-an-api-in-amazon-connect/"
  
 Parameters:
   CFS3BucketForWebSite:
@@ -16,6 +16,12 @@ Parameters:
     ConstraintDescription: 'Invalid S3 Bucket name'
     Description: Enter the (globally unique) name you would like to use for the Amazon S3 bucket where we will store the website assets and the sample search user api. This template will fail to deploy if the bucket name you chose is currently in use.
 
+  CFSInstanceARNParam:
+    Default:  ""
+    Type: String    
+    ConstraintDescription: 'Invalid Amazon Connect Instance ARN'
+    Description: "Amazon Connect Instance full ARN that you will have access to execute the search API"
+
             
 Metadata:
   'AWS::CloudFormation::Interface':
@@ -24,6 +30,15 @@ Metadata:
           default: Amazon S3 Configuration 
         Parameters:
           - CFS3BucketForWebSite
+      - Label:
+          default: Amazon Connect Instance Configuration 
+        Parameters:
+          - CFSInstanceARNParam
+    ParameterLabels:
+      CFS3BucketForWebSite:
+          default: "S3 bucket name"
+      CFSInstanceARNParam:
+          default: "Amazon Connect ARN" 
 
 Outputs:
   CloudfrontEndpoint:
@@ -193,10 +208,12 @@ Resources:
             AWS Lambda Function that will create the website and upload it to the S3 bucket
         Handler: "index.handler"
         Role: !GetAtt CFWebsiteCreatorRole.Arn
-        Runtime: "nodejs12.x"
+        Runtime: "nodejs14.x"
         MemorySize: 256
         Timeout: 120
-        Code: ./website-creator/
+        Code:
+            S3Bucket: !FindInMap [FunctionMap, Configuration, S3Bucket]
+            S3Key: !Join ["", [!FindInMap [FunctionMap, Configuration, S3Key], 'WebSiteHelper.zip']]
                       
     invokeWebSiteCreator:
         Type: Custom::CreateWebSite
@@ -207,3 +224,133 @@ Resources:
             Region: !Ref AWS::Region
             destS3Bucket: !Ref CFS3BucketForWebSite
             destS3KeyPrefix: usersearch-site
+            identityPoolId: !Ref BlogCognitoIDPool
+            userPoolID: !Ref BlogUserPool
+            appClientId: !Ref BlogUserPoolClient
+            instanceARN : !Ref CFSInstanceARNParam
+
+    SNSRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+          AssumeRolePolicyDocument: 
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Principal: 
+                  Service: 
+                    - "cognito-idp.amazonaws.com"
+                Action: 
+                  - "sts:AssumeRole"
+          Policies:
+            - PolicyName: !Sub ${AWS::StackName}-blog-userpool-su-sns-policy
+              PolicyDocument: 
+                Version: "2012-10-17"
+                Statement: 
+                  - Effect: "Allow"
+                    Action: "sns:publish"
+                    Resource: "*"     
+                    
+    BlogUserPool:
+        Type: "AWS::Cognito::UserPool"
+        Properties:
+          UserPoolName: !Join 
+              - ''
+              - - !Ref AWS::StackName
+                - "-blog-user-pool"          
+          AutoVerifiedAttributes:
+            - phone_number
+            - email
+          MfaConfiguration: "OFF"
+          SmsConfiguration:
+             ExternalId: !Sub blog-searchuser-client
+             SnsCallerArn: !GetAtt SNSRole.Arn
+          Policies:
+              PasswordPolicy:
+                    MinimumLength: 8
+                    RequireLowercase: False
+                    RequireNumbers: False
+                    RequireSymbols: False
+                    RequireUppercase: False
+
+    BlogUserPoolClient:
+        Type: "AWS::Cognito::UserPoolClient"
+        Properties:
+          ClientName: blog-searchuser-client
+          GenerateSecret: false
+          UserPoolId: !Ref BlogUserPool
+
+    BlogCognitoIDPool:
+        Type: 'AWS::Cognito::IdentityPool'
+        Properties:
+          AllowUnauthenticatedIdentities: true
+          CognitoIdentityProviders: 
+              - ClientId: !Ref BlogUserPoolClient
+                ProviderName: !GetAtt BlogUserPool.ProviderName   
+
+    BlogCognitoIDIamRoleAuth:
+        Type: 'AWS::IAM::Role'
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      Federated:
+                        - cognito-identity.amazonaws.com
+                    Action:
+                      - 'sts:AssumeRoleWithWebIdentity'
+                    Condition: { "ForAnyValue:StringLike": {"cognito-identity.amazonaws.com:amr": "authenticated" },  "StringEquals": {"cognito-identity.amazonaws.com:aud": !Ref BlogCognitoIDPool}}
+            
+            Path: /
+            Policies:
+                - PolicyName: !Sub ${AWS::StackName}-blog-searchuser-cognito-identity-authenticated
+                  PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "connect:ListUsers"
+                          - "connect:ListRoutingProfiles"
+                          - "connect:TagResource"
+                          - "connect:ListUserHierarchyGroups"
+                          - "connect:UntagResource"
+                          - "connect:DescribeUser"
+                          - "connect:SearchUsers"
+                          - "connect:ListSecurityProfiles"
+                        Resource: !Ref CFSInstanceARNParam
+                      - Effect: Allow
+                        Action:
+                          - 'mobileanalytics:PutEvents'
+                        Resource: '*'
+
+    BlogCognitoIDIamRoleUnAuth:
+        Type: 'AWS::IAM::Role'
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      Federated:
+                        - cognito-identity.amazonaws.com
+                    Action:
+                      - 'sts:AssumeRoleWithWebIdentity'
+                    Condition: { "ForAnyValue:StringLike": {"cognito-identity.amazonaws.com:amr": "unauthenticated" },  "StringEquals": {"cognito-identity.amazonaws.com:aud": !Ref BlogCognitoIDPool}}
+            
+            Path: /
+            Policies:
+                - PolicyName: !Sub ${AWS::StackName}-blog-searchuser-cognito-identity-unauthenticated
+                  PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                      - Effect: Allow
+                        Action:
+                          - 'mobileanalytics:PutEvents'
+                        Resource: '*'
+                        
+    BlogCognitoIDIamRoleAttachment:
+        Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+        Properties:
+            IdentityPoolId: !Ref BlogCognitoIDPool
+            Roles: {"authenticated": !GetAtt BlogCognitoIDIamRoleAuth.Arn, "unauthenticated": !GetAtt BlogCognitoIDIamRoleUnAuth.Arn}

@@ -12,5 +12,5 @@ Ensure you are in the root folder
 `sam build --use-container`
 
 ##### SAM Deploy:
-`sam deploy template.yaml --s3-bucket REPLACE_ME --stack-name REPLACE_ME --parameter-overrides ParameterKey=CFS3BucketForWebSite,ParameterValue=REPLACE_ME --capabilities CAPABILITY_IAM`
+`sam deploy template.yaml --s3-bucket REPLACE_ME --stack-name REPLACE_ME --parameter-overrides ParameterKey=CFS3BucketForWebSite,ParameterValue=REPLACE_ME ParameterKey=CFSInstanceARNParam,ParameterValue=REPLACE_ME_WITH_FULL_INSTANCE_ARN --capabilities CAPABILITY_IAM`
       
