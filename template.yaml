@@ -55,6 +55,8 @@ Resources:
         Type: 'AWS::S3::Bucket'
         Properties:
             BucketName: !Ref CFS3BucketForWebSite
+            VersioningConfiguration:
+              Status : Enabled
             BucketEncryption:
               ServerSideEncryptionConfiguration:
               - ServerSideEncryptionByDefault:
